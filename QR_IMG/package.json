@@ -1,0 +1,15 @@
+{
+  "name": "qr-generator-project",
+  "version": "1.0.0",
+  "description": "Image to QR Code Generator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@octokit/rest": "^19.0.13"
+  }
+}

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 QR 코드 생성기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { text-align: center; margin-bottom: 30px; font-size: 32px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
+        .tab {
+            padding: 12px 24px; background: none; border: none; font-size: 16px;
+            font-weight: 600; color: #666; cursor: pointer; transition: all 0.3s ease; position: relative;
+        }
+        .tab.active { color: #667eea; }
+        .tab.active::after {
+            content: ''; position: absolute; bottom: -2px; left: 0;
+            right: 0; height: 2px; background: #667eea;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .file-upload {
+            border: 3px dashed #667eea; border-radius: 15px; padding: 40px; text-align: center;
+            background: #f8f9fa; margin-bottom: 20px; cursor: pointer; transition: all 0.3s ease;
+        }
+        .file-upload:hover { background: #f0f7ff; border-color: #764ba2; }
+        .file-upload.dragover { background: #e8efff; border-color: #764ba2; }
+        .file-upload input[type="file"] { display: none; }
+        .upload-icon { font-size: 48px; margin-bottom: 15px; }
+        .image-preview {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .preview-item {
+            position: relative; border-radius: 10px; overflow: hidden;
+            background: #f8f9fa; aspect-ratio: 1;
+        }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-item .remove-btn {
+            position: absolute; top: 5px; right: 5px; width: 24px; height: 24px;
+            background: rgba(244, 67, 54, 0.9); color: white; border: none; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;
+        }
+        button {
+            width: 100%; padding: 12px 24px; border: none; border-radius: 10px;
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }
+        .generate-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .generate-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .qr-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px; margin-top: 30px;
+        }
+        .qr-item { background: #f8f9fa; border-radius: 15px; padding: 20px; text-align: center; }
+        .qr-item h3 { font-size: 14px; color: #666; margin-bottom: 15px; word-break: break-all; }
+        input[type="text"] {
+            width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0;
+            border-radius: 10px; font-size: 16px; margin-bottom: 20px;
+        }
+        input[type="text"]:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 이미지 QR 코드 생성기</h1>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="image">이미지로 QR 생성</button>
+            <button class="tab" data-tab="text">텍스트/URL로 QR 생성</button>
+        </div>
+        
+        <div id="image-tab" class="tab-content active">
+            <div class="file-upload">
+                <div class="upload-icon">📁</div>
+                <h4>QR코드로 만들 이미지 선택</h4>
+                <p>클릭하거나 파일을 드래그하세요 (1개만 가능)</p>
+                <input type="file" id="imageFile" accept="image/*">
+            </div>
+            
+            <div id="imagePreview" class="image-preview"></div>
+            
+            <button id="uploadBtn" class="generate-btn" disabled>업로드 후 QR 생성</button>
+        </div>
+        
+        <div id="text-tab" class="tab-content">
+            <input type="text" id="textInput" placeholder="URL, 텍스트, 전화번호 등...">
+            <button id="textBtn" class="generate-btn">QR 코드 생성</button>
+        </div>
+        
+        <div class="qr-grid" id="qrGrid"></div>
+    </div>
+    
+    <script>
+        const imageFileInput = document.getElementById('imageFile');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const textBtn = document.getElementById('textBtn');
+        const textInput = document.getElementById('textInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const qrGrid = document.getElementById('qrGrid');
+        const fileUploadArea = document.querySelector('.file-upload');
+        let selectedFile = null;
+
+        // 탭 전환 로직
+        document.querySelector('.tabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab')) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById(e.target.dataset.tab + '-tab').classList.add('active');
+            }
+        });
+
+        // 파일 선택 처리
+        function handleFileSelect(file) {
+            if (!file) return;
+            selectedFile = file;
+            imagePreview.innerHTML = '';
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.innerHTML = `<img src="${e.target.result}" alt="${file.name}"><button class="remove-btn">×</button>`;
+                imagePreview.appendChild(item);
+                item.querySelector('.remove-btn').addEventListener('click', () => {
+                    selectedFile = null;
+                    imageFileInput.value = '';
+                    imagePreview.innerHTML = '';
+                    uploadBtn.disabled = true;
+                });
+            };
+            reader.readAsDataURL(file);
+            uploadBtn.disabled = false;
+        }
+
+        imageFileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
+        fileUploadArea.addEventListener('click', () => imageFileInput.click());
+
+        // 드래그 앤 드롭
+        fileUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('dragover'); });
+        fileUploadArea.addEventListener('dragleave', () => fileUploadArea.classList.remove('dragover'));
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            handleFileSelect(e.dataTransfer.files[0]);
+        });
+
+        // QR 코드 생성 함수
+        function generateQR(title, data) {
+            const qrItem = document.createElement('div');
+            qrItem.className = 'qr-item';
+            const qrContainerId = 'qr-' + Date.now();
+            qrItem.innerHTML = `<h3>${title}</h3><div id="${qrContainerId}"></div>`;
+            qrGrid.prepend(qrItem); // 새 QR코드를 맨 앞에 추가
+
+            new QRCode(document.getElementById(qrContainerId), {
+                text: data,
+                width: 256,
+                height: 256,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        // 텍스트로 QR 생성 버튼
+        textBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('내용을 입력해주세요!');
+                return;
+            }
+            generateQR(text, text);
+            textInput.value = '';
+        });
+
+        // 이미지 업로드 및 QR 생성 버튼
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('먼저 이미지를 선택해주세요.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Image = e.target.result;
+                
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = '업로드 중...';
+
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: base64Image,
+                            name: selectedFile.name
+                        }),
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || '업로드 실패');
+                    
+                    generateQR(selectedFile.name, result.url);
+                    alert('이미지 업로드 및 QR 코드 생성을 완료했습니다!');
+
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert(`오류 발생: ${error.message}`);
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '업로드 후 QR 생성';
+                }
+            };
+            reader.readAsDataURL(selectedFile);
+        });
+    </script>
+</body>
+</html>
