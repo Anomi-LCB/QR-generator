@@ -3,366 +3,356 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이미지 QR코드 생성기</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <title>QR 코드 생성기 - 이미지 업로드</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
-            background-color: #f5f5f5;
         }
         
         .container {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
         h1 {
             text-align: center;
             color: #333;
             margin-bottom: 30px;
+            font-size: 32px;
         }
         
-        .upload-section {
-            border: 2px dashed #ddd;
-            border-radius: 10px;
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab.active {
+            color: #667eea;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .file-upload {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
             padding: 40px;
             text-align: center;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload:hover {
+            background: #f0f7ff;
+            border-color: #764ba2;
+        }
+        
+        .file-upload.dragover {
+            background: #e8efff;
+            border-color: #764ba2;
+        }
+        
+        .file-upload input[type="file"] {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .image-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
             margin-bottom: 30px;
-            background-color: #fafafa;
         }
         
-        .upload-section:hover {
-            border-color: #007bff;
-            background-color: #f0f8ff;
+        .preview-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8f9fa;
+            aspect-ratio: 1;
         }
         
-        input[type="file"] {
-            margin: 20px 0;
-            padding: 10px;
-            font-size: 16px;
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 30px;
+            height: 30px;
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
         }
         
         button {
-            background-color: #007bff;
-            color: white;
-            border: none;
+            flex: 1;
             padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px;
-        }
-        
-        button:hover {
-            background-color: #0056b3;
-        }
-        
-        .progress {
-            display: none;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #e0e0e0;
+            border: none;
             border-radius: 10px;
-            overflow: hidden;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
-        .progress-fill {
-            height: 100%;
-            background-color: #007bff;
-            width: 0%;
-            transition: width 0.3s ease;
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         
-        .qr-container {
-            margin: 20px 0;
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px; /* 여백 추가 */
+        }
+        
+        .qr-item {
+            background: #f8f9fa;
+            border-radius: 15px;
             padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
             text-align: center;
-            background-color: #fff;
         }
         
-        .qr-container canvas {
-            margin: 10px 0;
-            border: 1px solid #eee;
-        }
-        
-        .url-display {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
+        .qr-item h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
             word-break: break-all;
-            font-family: monospace;
-            color: #495057;
         }
         
-        .download-btn {
-            background-color: #28a745;
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
         }
         
-        .download-btn:hover {
-            background-color: #218838;
-        }
-        
-        .copy-btn {
-            background-color: #6c757d;
-        }
-        
-        .copy-btn:hover {
-            background-color: #545b62;
-        }
-        
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 이미지 QR코드 생성기</h1>
+        <h1>📸 이미지 → QR 코드 변환기</h1>
         
-        <div class="upload-section">
-            <h3>이미지를 선택하세요 (최대 30개)</h3>
-            <input type="file" id="imageInput" multiple accept="image/*" onchange="handleFileSelect()">
-            <br>
-            <button onclick="generateQRCodes()">QR코드 생성하기</button>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upload')">이미지 선택</button>
+            <button class="tab" onclick="switchTab('text')">텍스트/URL QR 생성</button>
         </div>
         
-        <div class="progress" id="progressContainer">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+        <div id="upload-tab" class="tab-content active">
+            <h3>📤 1단계: QR코드로 만들 이미지 선택</h3>
+            <p style="color: #666; margin-bottom: 20px;">공유하고 싶은 이미지 파일을 선택하세요. QR코드는 이미지 파일의 '공유 링크'로 만들어집니다.</p>
+            
+            <div class="file-upload" onclick="document.getElementById('imageFiles').click()">
+                <div class="upload-icon">📁</div>
+                <h4>이미지 파일 선택 (최대 30개)</h4>
+                <p>클릭하거나 파일을 드래그하세요</p>
+                <input type="file" id="imageFiles" multiple accept="image/*" onchange="handleFileSelect(event)">
             </div>
-            <div id="progressText">처리 중...</div>
+            
+            <div class="image-preview" id="imagePreview"></div>
+            
+            <div class="button-group">
+                <button class="generate-btn" onclick="showNextStepGuide()" disabled>다음 단계 안내</button>
+            </div>
         </div>
         
-        <div id="output"></div>
-    </div>
-
-    <script>
-        let selectedFiles = [];
+        <div id="text-tab" class="tab-content">
+            <h3>🔗 2단계: 링크로 QR 코드 생성</h3>
+            <input type="text" id="textInput" placeholder="이곳에 이미지 공유 URL을 붙여넣으세요">
+            <button class="generate-btn" onclick="generateTextQR()">QR 코드 생성</button>
+        </div>
         
-        function handleFileSelect() {
-            const input = document.getElementById('imageInput');
-            selectedFiles = Array.from(input.files);
+        <div class="qr-grid" id="qrGrid"></div>
+        
+    </디브>
+    
+    <대본>
+ 선택한 파일 = [];
+        
+        기능. 스위치탭(탭) {
+ 문서.쿼리SelectorAll(.tab').각각에 대해 (t => t.classList.remove('active');
+ 문서.쿼리SelectorAll(.tab-content').각각에 대해 (c => c.classList.remove('active');
             
-            if (selectedFiles.length > 30) {
-                alert('최대 30개 파일까지만 선택할 수 있습니다.');
-                input.value = '';
-                selectedFiles = [];
-                return;
-            }
-            
-            if (selectedFiles.length > 0) {
-                showStatus(`${selectedFiles.length}개 파일이 선택되었습니다.`, 'success');
-            }
+ event.target.classList.add('활성');
+ document.getElementById(탭 + '-탭')classList.add('활성');
         }
         
-        async function generateQRCodes() {
+        기능. handleFileSelect(이벤트) {
+ const 파일 = Array.from(event.target).파일).슬라이스 (0, 30);
+ 선택한 파일 = 파일;
+            
+ const 미리보기 = document.getElementById('imagePreview');
+ 미리보기.innerHTML = '';
+            
+ 파일.각 파일((파일, 인덱스) => {
+ const reader = new FileReader();
+ reader.onload = 함수(e) {
+ const 항목 = document.createElement('div');
+ item.class이름 = 'preview-아이템';
+ 항목.innerHTML = '
+ <img src="${e.target.result}" alt="${file.name }">
+ 클릭="remove-btn" 버튼 click="removeFile(${인덱스})">×//버튼>
+ `
+ 미리보기.appendChild(항목);
+ }
+ reader.readAsDataURL(파일);
+ });
+            
+ 문서.querySelector('#upload-tab .generate-btn').disabled = files.length === 0;
+        }
+        
+        기능. 파일 제거(인덱스) {
+ selectedFiles.splice(인덱스, 1);
+            // 미리보기 다시 렌더링
+ const fileInput = document.getElementById('imageFiles');
+ const dataTransfer = new dataTransfer();
+ 선택된 파일.각 파일(파일 => dataTransfer.items.add(파일));
+ fileInput.files = dataTransfer.파일;
+            
+        }
+ handleFileSelect({ 대상: { 파일: 선택된 파일} });
+        
+        기능. showNextStepGuide() {
+ 만약 (선택된 파일 길이 === 0) {
             if (selectedFiles.length === 0) {
-                alert('이미지를 먼저 선택해주세요.');
+                alert('먼저 QR코드로 만들 이미지를 선택해주세요.');
                 return;
-            }
             
-            const output = document.getElementById('output');
-            output.innerHTML = '';
-            
-            showProgress(true);
-            
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                
-                // 진행률 업데이트
-                const progress = ((i + 1) / selectedFiles.length) * 100;
-                updateProgress(progress, `${i + 1}/${selectedFiles.length} 처리 중...`);
-                
-                try {
-                    await processImageFile(file, i);
-                    await delay(100); // 부드러운 진행을 위한 딜레이
-                } catch (error) {
-                    console.error('파일 처리 오류:', error);
-                    showStatus(`${file.name} 처리 중 오류가 발생했습니다.`, 'error');
-                }
-            }
-            
-            showProgress(false);
-            showStatus('모든 QR코드 생성이 완료되었습니다!', 'success');
-        }
+            경고(
+ '이미지 업로드는 각자 사용하시는 클라우드/이미지 호스팅 서비스를 이용해주세요.\n\n' +
+                '이미지 업로드는 각자 사용하시는 클라우드/이미지 호스팅 서비스를 이용해주세요.\n\n' +
+                '▶ 다음 단계:\n' +
+                '1. Google Drive, Dropbox, Imgur 등에 선택하신 이미지를 업로드하세요.\n' +
+                '2. 업로드된 이미지의 "공유 링크"를 복사하세요.\n' +
+ );
+            );
         
-        async function processImageFile(file, index) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imageData = e.target.result;
-                    
-                    // 가상의 웹 URL 생성 (실제로는 이미지 호스팅 서비스 사용 필요)
-                    const mockUrl = `https://myimagehost.com/img/${Date.now()}_${index}.jpg`;
-                    
-                    createQRCode(mockUrl, file.name, imageData);
-                    resolve();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-        
-        function createQRCode(url, fileName, imagePreview) {
-            const container = document.createElement('div');
-            container.className = 'qr-container';
+        기능. 생성텍스트QR() {
+ const text = document.getElementById('textInput').가치.trim();
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('내용을 입력해주세요!');
+                return;
             
-            // 파일명 표시
-            const title = document.createElement('h4');
-            title.textContent = `📁 ${fileName}`;
-            
-            // 이미지 미리보기
-            const preview = document.createElement('img');
-            preview.src = imagePreview;
-            preview.style.maxWidth = '200px';
-            preview.style.maxHeight = '200px';
-            preview.style.objectFit = 'contain';
-            preview.style.border = '1px solid #ddd';
-            preview.style.borderRadius = '5px';
-            
-            // URL 표시
-            const urlDisplay = document.createElement('div');
-            urlDisplay.className = 'url-display';
-            urlDisplay.textContent = url;
-            
-            // QR코드 캔버스
-            const canvas = document.createElement('canvas');
-            
-            // 버튼들
-            const downloadBtn = document.createElement('button');
-            downloadBtn.className = 'download-btn';
-            downloadBtn.textContent = '🔽 QR코드 다운로드';
-            downloadBtn.onclick = function() {
-                const link = document.createElement('a');
-                link.download = `QR_${fileName}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-            };
-            
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
-            copyBtn.textContent = '📋 URL 복사';
-            copyBtn.onclick = function() {
-                navigator.clipboard.writeText(url).then(() => {
-                    alert('URL이 클립보드에 복사되었습니다!');
-                });
-            };
-            
-            // 요소들 조립
-            container.appendChild(title);
-            container.appendChild(preview);
-            container.appendChild(urlDisplay);
-            container.appendChild(canvas);
-            container.appendChild(downloadBtn);
-            container.appendChild(copyBtn);
-            
-            document.getElementById('output').appendChild(container);
-            
-            // QR코드 생성
-            QRCode.toCanvas(canvas, url, {
+ const qrGrid = document.getElementById('qrGrid');
+            const qrGrid = document.getElementById('qrGrid');
+            qrGrid.innerHTML = '';
+ const qrItem = document.createElement('div');
+            const qrItem = document.createElement('div');
+            qrItem.className = 'qr-item';
+            qrItem.innerHTML = `<h3>${text}</h3><div id="textqr"></div>`;
+            qrGrid.appendChild(qrItem);
+ 새로운 QRCode(document.getElementById('textqr'), {
+            new QRCode(document.getElementById('textqr'), {
+                text: text,
                 width: 256,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
+                height: 256,
+                correctLevel: QRCode.CorrectLevel.H
             });
-        }
         
-        function showProgress(show) {
-            const container = document.getElementById('progressContainer');
-            container.style.display = show ? 'block' : 'none';
-        }
+        // 드래그 앤 드롭 지원
+ const 파일업로드 = 문서.쿼리 셀렉터('파일 업로드');
+        const fileUpload = document.querySelector('.file-upload');
+ fileUpload.addEventListener('드래고오버', (e) => {
+ e.preventDefault();
+ fileUpload.classList.add('드래그오버');
+ });
         
-        function updateProgress(percent, text) {
-            document.getElementById('progressFill').style.width = percent + '%';
-            document.getElementById('progressText').textContent = text;
-        }
+ fileUpload.addEventListener('드래그리브', () => {
+ fileUpload.classList.remove('드래그오버');
+ });
         
-        function showStatus(message, type) {
-            const existingStatus = document.querySelector('.status');
-            if (existingStatus) {
-                existingStatus.remove();
-            }
-            
-            const status = document.createElement('div');
-            status.className = `status ${type}`;
-            status.textContent = message;
-            
-            document.querySelector('.upload-section').appendChild(status);
-            
-            setTimeout(() => {
-                if (status.parentNode) {
-                    status.remove();
-                }
-            }, 3000);
-        }
-        
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-        
-        // 드래그 앤 드롭 기능
-        const uploadSection = document.querySelector('.upload-section');
-        
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#007bff';
-            uploadSection.style.backgroundColor = '#f0f8ff';
-        });
-        
-        uploadSection.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#ddd';
-            uploadSection.style.backgroundColor = '#fafafa';
-        });
-        
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#ddd';
-            uploadSection.style.backgroundColor = '#fafafa';
-            
-            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-            
-            if (files.length > 30) {
-                alert('최대 30개 파일까지만 선택할 수 있습니다.');
-                return;
-            }
-            
-            document.getElementById('imageInput').files = e.dataTransfer.files;
-            selectedFiles = files;
-            
-            if (selectedFiles.length > 0) {
-                showStatus(`${selectedFiles.length}개 파일이 선택되었습니다.`, 'success');
-            }
-        });
-    </script>
-</body>
-</html>
+ fileUpload.addEventListener('drop', (e) => {
+ e.preventDefault();
+ fileUpload.classList.remove('드래그오버');
+ const 파일 = e.dataTransfer.파일;
+ document.getElementById('imageFiles').파일 = 파일;
+ handleFileSelect({ 대상: { 파일} });
+ });
+    </대본>
+</몸>
+</HTML>
