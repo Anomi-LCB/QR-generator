@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 QR코드 생성기</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background-color: #fafafa;
+        }
+        
+        .upload-section:hover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .progress {
+            display: none;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .qr-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            background-color: #fff;
+        }
+        
+        .qr-container canvas {
+            margin: 10px 0;
+            border: 1px solid #eee;
+        }
+        
+        .url-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: monospace;
+            color: #495057;
+        }
+        
+        .download-btn {
+            background-color: #28a745;
+        }
+        
+        .download-btn:hover {
+            background-color: #218838;
+        }
+        
+        .copy-btn {
+            background-color: #6c757d;
+        }
+        
+        .copy-btn:hover {
+            background-color: #545b62;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 이미지 QR코드 생성기</h1>
+        
+        <div class="upload-section">
+            <h3>이미지를 선택하세요 (최대 30개)</h3>
+            <input type="file" id="imageInput" multiple accept="image/*" onchange="handleFileSelect()">
+            <br>
+            <button onclick="generateQRCodes()">QR코드 생성하기</button>
+        </div>
+        
+        <div class="progress" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div id="progressText">처리 중...</div>
+        </div>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        
+        function handleFileSelect() {
+            const input = document.getElementById('imageInput');
+            selectedFiles = Array.from(input.files);
+            
+            if (selectedFiles.length > 30) {
+                alert('최대 30개 파일까지만 선택할 수 있습니다.');
+                input.value = '';
+                selectedFiles = [];
+                return;
+            }
+            
+            if (selectedFiles.length > 0) {
+                showStatus(`${selectedFiles.length}개 파일이 선택되었습니다.`, 'success');
+            }
+        }
+        
+        async function generateQRCodes() {
+            if (selectedFiles.length === 0) {
+                alert('이미지를 먼저 선택해주세요.');
+                return;
+            }
+            
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            
+            showProgress(true);
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                
+                // 진행률 업데이트
+                const progress = ((i + 1) / selectedFiles.length) * 100;
+                updateProgress(progress, `${i + 1}/${selectedFiles.length} 처리 중...`);
+                
+                try {
+                    await processImageFile(file, i);
+                    await delay(100); // 부드러운 진행을 위한 딜레이
+                } catch (error) {
+                    console.error('파일 처리 오류:', error);
+                    showStatus(`${file.name} 처리 중 오류가 발생했습니다.`, 'error');
+                }
+            }
+            
+            showProgress(false);
+            showStatus('모든 QR코드 생성이 완료되었습니다!', 'success');
+        }
+        
+        async function processImageFile(file, index) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    
+                    // 가상의 웹 URL 생성 (실제로는 이미지 호스팅 서비스 사용 필요)
+                    const mockUrl = `https://myimagehost.com/img/${Date.now()}_${index}.jpg`;
+                    
+                    createQRCode(mockUrl, file.name, imageData);
+                    resolve();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function createQRCode(url, fileName, imagePreview) {
+            const container = document.createElement('div');
+            container.className = 'qr-container';
+            
+            // 파일명 표시
+            const title = document.createElement('h4');
+            title.textContent = `📁 ${fileName}`;
+            
+            // 이미지 미리보기
+            const preview = document.createElement('img');
+            preview.src = imagePreview;
+            preview.style.maxWidth = '200px';
+            preview.style.maxHeight = '200px';
+            preview.style.objectFit = 'contain';
+            preview.style.border = '1px solid #ddd';
+            preview.style.borderRadius = '5px';
+            
+            // URL 표시
+            const urlDisplay = document.createElement('div');
+            urlDisplay.className = 'url-display';
+            urlDisplay.textContent = url;
+            
+            // QR코드 캔버스
+            const canvas = document.createElement('canvas');
+            
+            // 버튼들
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'download-btn';
+            downloadBtn.textContent = '🔽 QR코드 다운로드';
+            downloadBtn.onclick = function() {
+                const link = document.createElement('a');
+                link.download = `QR_${fileName}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.textContent = '📋 URL 복사';
+            copyBtn.onclick = function() {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('URL이 클립보드에 복사되었습니다!');
+                });
+            };
+            
+            // 요소들 조립
+            container.appendChild(title);
+            container.appendChild(preview);
+            container.appendChild(urlDisplay);
+            container.appendChild(canvas);
+            container.appendChild(downloadBtn);
+            container.appendChild(copyBtn);
+            
+            document.getElementById('output').appendChild(container);
+            
+            // QR코드 생성
+            QRCode.toCanvas(canvas, url, {
+                width: 256,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+        }
+        
+        function showProgress(show) {
+            const container = document.getElementById('progressContainer');
+            container.style.display = show ? 'block' : 'none';
+        }
+        
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+        
+        function showStatus(message, type) {
+            const existingStatus = document.querySelector('.status');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+            
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            
+            document.querySelector('.upload-section').appendChild(status);
+            
+            setTimeout(() => {
+                if (status.parentNode) {
+                    status.remove();
+                }
+            }, 3000);
+        }
+        
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // 드래그 앤 드롭 기능
+        const uploadSection = document.querySelector('.upload-section');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#007bff';
+            uploadSection.style.backgroundColor = '#f0f8ff';
+        });
+        
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#ddd';
+            uploadSection.style.backgroundColor = '#fafafa';
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#ddd';
+            uploadSection.style.backgroundColor = '#fafafa';
+            
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            
+            if (files.length > 30) {
+                alert('최대 30개 파일까지만 선택할 수 있습니다.');
+                return;
+            }
+            
+            document.getElementById('imageInput').files = e.dataTransfer.files;
+            selectedFiles = files;
+            
+            if (selectedFiles.length > 0) {
+                showStatus(`${selectedFiles.length}개 파일이 선택되었습니다.`, 'success');
+            }
+        });
+    </script>
+</body>
+</html>
